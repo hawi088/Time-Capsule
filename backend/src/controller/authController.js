@@ -56,7 +56,7 @@ const login = async(req,res)=>{
             success:false,
             message:'Invalid credentils'
         })
-        const checkPwd = await bcrypt.compare(password , existUser.password)
+        const checkPwd = await bcrypt.compare(password , user.password)
         if(!checkPwd) return res.status(401).json({
             success:false,
             message:'Invalid credentials'
@@ -74,7 +74,8 @@ const login = async(req,res)=>{
         })
         res.status(201).json({
             success:true,
-            message:'User logged in successfully'
+            message:'User logged in successfully',
+            token
         })
     }
     catch(err){

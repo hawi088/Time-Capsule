@@ -13,10 +13,13 @@ const createCapsule = async(req,res)=>{
         unlockDate,
         content
     })
-    capsule.save()
+    await capsule.save()
     res.status(201).json({
         success:true,
-        message:'Capsule successfully created'
+        capsule:{
+        message:'Capsule successfully created',
+        id:capsule._id
+        }
     })
 }catch(err){
     res.status(500).json({
@@ -49,14 +52,25 @@ const getCapsuleById = async(req,res)=>{
                 message:'Capsule not found!'
             })
         }
-        const unlockDate = Date.now() >= capsule.unlockDate
-        if(!unlockDate){
-            return res.json({
-                title:capsule.title,
-                locked: true,
-                unlockDate:capsule.unlockDate
-            })
+        const isUnlocked = Date.now() >= capsule.unlockDate
+        let daysRemaining =0
+        if(!isUnlocked){
+            const timeDifference =  new Date(capsule.unlockDate).getTime()- Date.now()
+            daysRemaining = Math.ceil(timeDifference/(24*60*60*1000))
         }
+
+            return res.json({
+                success:true,
+                capsule:{
+                    id:capsule._id,
+                    title:capsule.title,
+                    unlockDate:capsule.unlockDate,
+                    isUnlocked,
+                    content:isUnlocked?capsule.content : null,
+                    daysRemaining:isUnlocked?0:daysRemaining
+                }
+            })
+        
     }catch(err){
         res.status(500).json({
             success:false,
@@ -65,4 +79,68 @@ const getCapsuleById = async(req,res)=>{
     }
 }
 
-module.exports = {getCapsuleById , getAllCapsule , createCapsule}
+const deleteCapsule= async(req,res)=>{
+    try{
+    const capsule = await Capsule.findOne({
+        _id : req.params.id,
+        owner:req.userId
+    })
+    if(!capsule) return res.status(401).json({
+        success:false,
+        message:'Capsule not found'
+    })
+    await Capsule.deleteOne({_id:capsule._id})
+    res.status(201).json({
+        success:true,
+        message:'Capsule successfully deleted'
+    })
+}catch(err){
+    res.status(500).json({
+        success:false,
+        message:'Internal Server Error'
+    })
+}
+}
+
+const updateCapsule = async(req,res)=>{
+    try{
+        const { title , unlockDate , content } = req.body
+        const capsule = await Capsule.findOne({
+            _id:req.params.id,
+            owner : req.userId
+        })
+        if(!capsule) return res.status(404).json({
+            success:false,
+            message:'Capsule not found'
+        })
+        const checkUnlockDate =new Date(capsule.unlockDate).getTime() - Date.now()
+        if(checkUnlockDate > 0) return res.status(401).json({
+            success:false,
+            message:"You cannot edit the capsule since the unlockDate has not arrived yet"
+        })
+        if(!title && !unlockDate && !content) return res.status(401).json({
+            success:false,
+            message:"Please provide the fields that you want to update"
+        })
+           const updateData = {};
+           if (title) updateData.title = title;
+           if (content) updateData.content = content;
+           if (unlockDate) updateData.unlockDate = new Date(unlockDate);
+   
+           const updatedCapsule = await Capsule.findOneAndUpdate(
+               { _id: req.params.id, owner: req.userId },
+               updateData,
+               { new: true } 
+           );
+        res.status(201).json({
+            success:true,
+            message:'Capsule Successfully Updated'
+        })
+    }catch(err){
+        res.status(500).json({
+            success:false,
+            message:'Internal Server Error'
+        })
+    }
+}
+module.exports = {getCapsuleById , getAllCapsule , createCapsule , deleteCapsule , updateCapsule}

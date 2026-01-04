@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-
+const User = require('../model/User')
 const capsuleSchema = new mongoose.Schema({
     owner:{
         type:mongoose.Schema.Types.ObjectId,
@@ -16,7 +16,7 @@ const capsuleSchema = new mongoose.Schema({
         required:true,
     },
     content:{
-        type:Sting,
+        type:String,
         required:true
     },
     isUnlocked:{

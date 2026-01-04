@@ -1,25 +1,33 @@
 const jwt = require('jsonwebtoken')
 
 const authMiddleware =async (req,res,next)=>{
-    const authHeader = req.headers.authorization
+    const authHeader = req.headers["authorization"];
 
-    if(!authHeader || authHeader.startsWith('Bearer')){
-        res.status(401).json({
+    if(!authHeader || !authHeader.startsWith('Bearer')){
+        return res.status(401).json({
+            success:false,
+            message:'no token provided'
+        })
+    }
+    const token = authHeader.split(' ')[1]
+    if(!token){
+        return res.status(401).json({
             success:false,
             message:'no token provided'
         })
     }
     try{
-    const decoded = await jwt.verify(token , process.env.JWT_SECRET)
-    req.userId = decoded.userId
-    next()
+        const decoded = jwt.verify(token , process.env.JWT_SECRET)
+        req.userId = decoded.userId
+        next()
+        }
+        catch(err){
+            return res.status(500).json({
+                success:false,
+                message:'Internal Server Error'
+            })
+        }
     }
-    catch(err){
-        res.status(500).json({
-            success:false,
-            message:'Internal Server Error'
-        })
-    }
-}
+    
 
 module.exports = authMiddleware
